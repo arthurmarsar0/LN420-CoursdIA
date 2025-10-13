@@ -31,6 +31,29 @@ public class GomokuBoard extends Array2D<TileState>{
             }
         }
     }
+    
+    public String asString()
+	{
+		StringBuilder sb = new StringBuilder();
+        Coords currentCellCoords = new Coords();
+
+        for (currentCellCoords.row = 0; currentCellCoords.row < size; currentCellCoords.row ++)
+        {
+            for (currentCellCoords.column = 0; currentCellCoords.column < size; currentCellCoords.column ++)
+            {
+                switch (get(currentCellCoords))
+                { 
+	                case White: sb.append('W'); break;
+	                case Black: sb.append('B'); break;
+	                case Empty:	sb.append('-'); break;
+	                default : throw new RuntimeException();
+                }
+            }
+            sb.append('\n');
+        }
+	return sb.toString();
+	}
+
 
     /**Obtenir l'état de fin de partie du plateau
      * @return Etat de fin de partie
