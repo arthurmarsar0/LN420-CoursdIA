@@ -12,7 +12,7 @@ import projet1.gomoku.gamecore.enums.Player;
 import projet1.gomoku.gamecore.enums.TileState;
 
 
-public class AI_Minimax extends PlayerController {
+public class AI_Minimax3 extends PlayerController {
 
     private final int maxDepth;
     private final int winLen = 5;
@@ -20,7 +20,7 @@ public class AI_Minimax extends PlayerController {
     private final boolean useQuiescence = true;
     private final int timeLimitMs = 900;
 
-    public AI_Minimax(int depth) {
+    public AI_Minimax3(int depth) {
         this.maxDepth = Math.max(1, depth);
     }
 
@@ -40,6 +40,13 @@ public class AI_Minimax extends PlayerController {
         if (moves.isEmpty()) { //In case generateCandidateMoves doesn't works properly
             return new Coords(board.getWidth() / 2, board.getHeight() / 2); //TODO: (test) Change for a random position 
         }
+        
+        for (Coords m : moves) {
+            if (createsDoubleThreat(board, player, m)) {
+                return m; // prioridade absoluta: cria 2+ vitórias em 1
+            }
+        }
+
 
         int bestScore = Integer.MIN_VALUE;
         Coords bestMove = moves.get(0);
@@ -77,111 +84,118 @@ public class AI_Minimax extends PlayerController {
     }
 
     private int minimax(GomokuBoard board, int depth, int alpha, int beta, Player toMove, Player me) {
-        Integer termScore = terminalScore(board, me);
-        if (termScore != null) return termScore;
-        if (depth == 0) return evaluate(board, me);
+	    Integer termScore = terminalScore(board, me);
+	    if (termScore != null) return termScore;
+	
+	    if (depth == 0) return evaluate(board, me);
+	
+	    List<Coords> moves = generateCandidateMoves(board, vicinityRadius, toMove);
+	    if (moves.isEmpty()) return 0;
+	
+	    boolean maximizing = (toMove == me);
+	    if (maximizing) {
+	        int best = Integer.MIN_VALUE;
+	        for (Coords m : moves) {
+	            if (!isEmpty(board, m)) continue;
+	
+	            // make
+	            TileState prev = get(board, m);
+	            set(board, m, toTile(toMove));
+	
+	            int val = minimax(board, depth - 1, alpha, beta, switchPlayer(toMove), me);
+	
+	            // unmake
+	            set(board, m, prev); // prev é Empty
+	
+	            if (val > best) best = val;
+	            if (val > alpha) alpha = val;
+	            if (beta <= alpha) break; // poda
+	        }
+	        return best;
+	    } else {
+	        int best = Integer.MAX_VALUE;
+	        for (Coords m : moves) {
+	            if (!isEmpty(board, m)) continue;
+	
+	            // make
+	            TileState prev = get(board, m);
+	            set(board, m, toTile(toMove));
+	
+	            int val = minimax(board, depth - 1, alpha, beta, switchPlayer(toMove), me);
+	
+	            // unmake
+	            set(board, m, prev);
+	
+	            if (val < best) best = val;
+	            if (val < beta) beta = val;
+	            if (beta <= alpha) break; // poda
+	        }
+	        return best;
+	    }
+	}
 
-        List<Coords> moves = generateCandidateMoves(board, vicinityRadius, toMove);
-        if (moves.isEmpty()) return 0;
 
-        boolean maximizing = (toMove == me);
-        if (maximizing) {
-            int best = Integer.MIN_VALUE;
-            for (Coords m : moves) {
-                if (!isEmpty(board, m)) continue;
-                GomokuBoard next = board.clone();
-                set(next, m, toTile(toMove));
-                int val = minimax(next, depth - 1, alpha, beta, switchPlayer(toMove), me);
+	private List<Coords> generateCandidateMoves(GomokuBoard board, int radius, Player toMove) {
+	    int width = board.getWidth();
+	    int height = board.getHeight();
+	    boolean[][] near = new boolean[height][width];
+	    boolean anyStone = false;
+	
+	    // prioridade máxima dentro do nó: win / block imediatos
+	    Coords w = findImmediateWin(board, toMove);
+	    if (w != null) {
+	        List<Coords> only = new ArrayList<>();
+	        only.add(w);
+	        return only;
+	    }
+	    Coords b = findImmediateWin(board, switchPlayer(toMove));
+	    if (b != null) {
+	        List<Coords> only = new ArrayList<>();
+	        only.add(b);
+	        return only;
+	    }
+	
+	    for (int y = 0; y < height; y++) {
+	        for (int x = 0; x < width; x++) {
+	            if (get(board, x, y) != TileState.Empty) {
+	                anyStone = true;
+	                for (int dy = -radius; dy <= radius; dy++) {
+	                    for (int dx = -radius; dx <= radius; dx++) {
+	                        int nx = x + dx, ny = y + dy;
+	                        if (nx >= 0 && ny >= 0 && nx < width && ny < height) {
+	                            near[ny][nx] = true;
+	                        }
+	                    }
+	                }
+	            }
+	        }
+	    }
+	
+	    List<Coords> moves = new ArrayList<>();
+	    if (anyStone) {
+	        for (int y = 0; y < height; y++) {
+	            for (int x = 0; x < width; x++) {
+	                if (near[y][x] && get(board, x, y) == TileState.Empty) {
+	                    moves.add(new Coords(x, y));
+	                }
+	            }
+	        }
+	    } else {
+	        moves.add(new Coords(width / 2, height / 2));
+	    }
+	
+	    Collections.sort(moves, new Comparator<Coords>() {
+	        @Override
+	        public int compare(Coords a, Coords b) {
+	            int sa = quickMoveScore(board, a);
+	            int sb = quickMoveScore(board, b);
+	            return Integer.compare(sb, sa);
+	        }
+	    });
+	    if (moves.size() > 40) moves = moves.subList(0, 40);
+	    return moves;
+	}
 
-                // update BEST n ALPHA
-                if (val > best) best = val;
-                if (val > alpha) alpha = val;
-
-                // AlphaBeta pruning 
-                if (beta <= alpha) break;
-            }
-            return best;
-        } else {
-            int best = Integer.MAX_VALUE;
-            for (Coords m : moves) {
-                if (!isEmpty(board, m)) continue;
-                GomokuBoard next = board.clone();
-                set(next, m, toTile(toMove));
-                int val = minimax(next, depth - 1, alpha, beta, switchPlayer(toMove), me);
-
-                // update BEST n BETA 
-                if (val < best) best = val;
-                if (val < beta) beta = val; //TODO: Check if that comparaisons is actually right
-
-                // AlphaBeta pruning
-                if (beta <= alpha) break;
-            }
-            return best;
-        }
-    }
-
-    // 
-    private List<Coords> generateCandidateMoves(GomokuBoard board, int radius, Player toMove) {
-        int width = board.getWidth();
-        int height = board.getHeight();
-        boolean[][] near = new boolean[height][width];
-        boolean anyStone = false;
-        
-        List<Coords> moves = new ArrayList<>();
-
-        // prioridade máxima: win-in-1
-        Coords w = findImmediateWin(board, toMove);
-        if (w != null) { moves.add(w); return moves; }
-
-        // prioridade 2: bloquear win-in-1 do oponente
-        Coords b = findImmediateWin(board, switchPlayer(toMove));
-        if (b != null) { moves.add(b); return moves; }
-
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                if (get(board, x, y) != TileState.Empty) {
-                    anyStone = true;
-                    for (int dy = -radius; dy <= radius; dy++) {
-                        for (int dx = -radius; dx <= radius; dx++) {
-                            int nx = x + dx, ny = y + dy;
-                            if (nx >= 0 && ny >= 0 && nx < width && ny < height) {
-                                near[ny][nx] = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (anyStone) {
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
-                    if (near[y][x] && get(board, x, y) == TileState.Empty) {
-                        moves.add(new Coords(x, y));
-                    }
-                }
-            }
-        } else {
-            // Default Value
-            moves.add(new Coords(width / 2, height / 2));
-        }
-
-        // Ordenação por heurística rápida (move ordering) para melhorar a poda
-        Collections.sort(moves, new Comparator<Coords>() {
-            @Override
-            public int compare(Coords a, Coords b) {
-                int sa = quickMoveScore(board, a);
-                int sb = quickMoveScore(board, b);
-                return Integer.compare(sb, sa); 
-            }
-        });
-        
-        if (moves.size() > 40) {
-            moves = moves.subList(0, 40);
-        }
-        
-        return moves;
-    }
 
     private int quickMoveScore(GomokuBoard board, Coords coord) {
     	int score = 0;
@@ -401,6 +415,35 @@ public class AI_Minimax extends PlayerController {
 	 }
 
 
+	// conta quantas casas (vazias) dão vitória imediata para 'p'
+	 private int countImmediateWins(GomokuBoard board, Player p) {
+	     TileState me = toTile(p);
+	     int w = board.getWidth(), h = board.getHeight();
+	     int cnt = 0;
+	     for (int y = 0; y < h; y++) {
+	         for (int x = 0; x < w; x++) {
+	             if (get(board, x, y) != TileState.Empty) continue;
+	             TileState prev = get(board, x, y);
+	             board.set(x, y, me);
+	             boolean win = hasN(board, me, winLen);
+	             board.set(x, y, prev);
+	             if (win) cnt++;
+	         }
+	     }
+	     return cnt;
+	 }
+
+	 // verificar se jogar em 'm' cria >= 2 vitórias em 1 no lance seguinte (fork)
+	 private boolean createsDoubleThreat(GomokuBoard board, Player me, Coords m) {
+	     if (!isEmpty(board, m)) return false;
+	     TileState prev = get(board, m);
+	     set(board, m, toTile(me));
+	     int winsNext = countImmediateWins(board, me);
+	     set(board, m, prev);
+	     return winsNext >= 2;
+	 }
+ 
+	 
     private TileState get(GomokuBoard b, int x, int y) {
         return b.get(x, y);
     }
