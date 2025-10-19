@@ -12,7 +12,7 @@ import projet1.gomoku.gamecore.enums.Player;
 import projet1.gomoku.gamecore.enums.TileState;
 
 
-public class AI_Minimax extends PlayerController {
+public class AI_Minimax2 extends PlayerController {
 
     private final int maxDepth;
     private final int winLen = 5;
@@ -20,7 +20,7 @@ public class AI_Minimax extends PlayerController {
     private final boolean useQuiescence = true;
     private final int timeLimitMs = 900;
 
-    public AI_Minimax(int depth) {
+    public AI_Minimax2(int depth) {
         this.maxDepth = Math.max(1, depth);
     }
 
@@ -207,11 +207,11 @@ public class AI_Minimax extends PlayerController {
         s += 800  * countOpen(board, toTile(me), 4);
         s += 300  * countSemiOpen(board, toTile(me), 4);
         s += 50   * countSemiOpen(board, toTile(me), 3);
-        s += 1300 * countBroken(board, toTile(me), 4); //Agora conta padroes saltados X X _ X X
-        s += 180 * countBroken(board, toTile(me), 3); // X _ X X
+//        s += 1300 * countBroken(board, toTile(me), 4); //Agora conta padroes saltados X X _ X X
+//        s += 180 * countBroken(board, toTile(me), 3); // X _ X X
 
-        s -= 1500 * countBroken(board, toTile(opp), 4);
-        s -= 220 * countBroken(board, toTile(opp), 3);
+//        s -= 1500 * countBroken(board, toTile(opp), 4);
+//        s -= 220 * countBroken(board, toTile(opp), 3);
         s -= 12   * countOpen(board, toTile(opp), 2);
         s -= 100  * countOpen(board, toTile(opp), 3);
         s -= 1200 * countOpen(board, toTile(opp), 4);
