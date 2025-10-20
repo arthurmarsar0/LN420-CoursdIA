@@ -17,8 +17,6 @@ public class AI_Minimax extends PlayerController {
     private final int maxDepth;
     private final int winLen = 5;
     private final int vicinityRadius = 2; // limita geração de jogadas às casas próximas
-    private final boolean useQuiescence = true;
-    private final int timeLimitMs = 900;
 
     public AI_Minimax(int depth) {
         this.maxDepth = Math.max(1, depth);
@@ -129,11 +127,9 @@ public class AI_Minimax extends PlayerController {
         
         List<Coords> moves = new ArrayList<>();
 
-        // prioridade máxima: win-in-1
         Coords w = findImmediateWin(board, toMove);
         if (w != null) { moves.add(w); return moves; }
 
-        // prioridade 2: bloquear win-in-1 do oponente
         Coords b = findImmediateWin(board, switchPlayer(toMove));
         if (b != null) { moves.add(b); return moves; }
 
@@ -166,7 +162,7 @@ public class AI_Minimax extends PlayerController {
             moves.add(new Coords(width / 2, height / 2));
         }
 
-        // Ordenação por heurística rápida (move ordering) para melhorar a poda
+        // move ordering for helping the pruning
         Collections.sort(moves, new Comparator<Coords>() {
             @Override
             public int compare(Coords a, Coords b) {
@@ -186,7 +182,7 @@ public class AI_Minimax extends PlayerController {
     private int quickMoveScore(GomokuBoard board, Coords coord) {
     	int score = 0;
 
-    	// 1) densidade de vizinhança (barato e bom pra ordenar)
+    	//Check for neighbors' density
     	for (int dy = -1; dy <= 1; dy++) {		
 	        for (int dx = -1; dx <= 1; dx++) {
 	            if (dx == 0 && dy == 0) continue;
@@ -197,8 +193,7 @@ public class AI_Minimax extends PlayerController {
 	        }
 	    }
 	
-	    // 2) fechar 5 pra qualquer lado? (win-in-1 tem que vir no topo)
-	    for (TileState who : new TileState[]{TileState.White, TileState.Black}) {
+	    for (TileState who : new TileState[]{TileState.White, TileState.Black}) { //Check for winning moves
 	        // make
 	        TileState prev = get(board, coord);
 	        board.set(coord.column, coord.row, who);
@@ -209,24 +204,19 @@ public class AI_Minimax extends PlayerController {
 	        if (win) score += 10000;
 	    }
 	
-	    // 3) pequeno bônus se cria broken-4 para quem move a partir da posição atual do tabuleiro
-	    //    (heurística: inferimos o "lado a mover" pelo último lance avaliado no minimax,
-	    //     mas como aqui estamos fora do contexto, usamos um bônus pequeno e simétrico)
-	    //    -> isso já ajuda a ordenar "fork builders".
-	    //    Testamos para White e Black e somamos um bônus baixo.
 	    for (TileState who : new TileState[]{TileState.White, TileState.Black}) {
 	        TileState prev = get(board, coord);
 	        board.set(coord.column, coord.row, who);
-	        int b4 = countBroken(board, who, 4);
+	        int broken4 = countBroken(board, who, 4);
 	        board.set(coord.column, coord.row, prev);
-	        if (b4 > 0) score += 60 * b4;
+	        if (broken4 > 0) score += 60 * broken4;
 	    }
 	
 	    return score;
 	}
 
 
-    //Avaliação Heurística - Called just in the end
+    //Heuristic evaluation - Called just in the end
     private int evaluate(GomokuBoard board, Player me) {
         Player opp = switchPlayer(me);
 
@@ -236,18 +226,18 @@ public class AI_Minimax extends PlayerController {
 
         int s = 0;
         s += 10   * countOpen(board, toTile(me), 2);
-        s += 80   * countOpen(board, toTile(me), 3);
-        s += 800  * countOpen(board, toTile(me), 4);
+        s += 180  * countOpen(board, toTile(me), 3);
+        s += 1300 * countOpen(board, toTile(me), 4);
         s += 300  * countSemiOpen(board, toTile(me), 4);
         s += 50   * countSemiOpen(board, toTile(me), 3);
-        s += 1300 * countBroken(board, toTile(me), 4); //Agora conta padroes saltados X X _ X X
-        s += 180 * countBroken(board, toTile(me), 3); // X _ X X
+        s += 800  * countBroken(board, toTile(me), 4); //Agora conta padroes saltados X X _ X X
+        s += 80   * countBroken(board, toTile(me), 3); // X _ X X
 
-        s -= 1500 * countBroken(board, toTile(opp), 4);
-        s -= 220 * countBroken(board, toTile(opp), 3);
+        s -= 1200 * countBroken(board, toTile(opp), 4);
+        s -= 120  * countBroken(board, toTile(opp), 3);
         s -= 12   * countOpen(board, toTile(opp), 2);
-        s -= 100  * countOpen(board, toTile(opp), 3);
-        s -= 1200 * countOpen(board, toTile(opp), 4);
+        s -= 220  * countOpen(board, toTile(opp), 3);
+        s -= 1500 * countOpen(board, toTile(opp), 4);
         s -= 400  * countSemiOpen(board, toTile(opp), 4);
         s -= 60   * countSemiOpen(board, toTile(opp), 3);
 
@@ -261,7 +251,7 @@ public class AI_Minimax extends PlayerController {
         return null;
     }
 
-    // Auxiliary functions - probably already existed in other file but anyway lol
+    // Auxiliary functions
 
     private boolean isFull(GomokuBoard board) {
         for (int y = 0; y < board.getHeight(); y++) {
@@ -272,7 +262,7 @@ public class AI_Minimax extends PlayerController {
         return true;
     }
 
-    private boolean hasN(GomokuBoard board, TileState who, int n) { //Para checar se existem n peças numa direção
+    private boolean hasN(GomokuBoard board, TileState who, int n) { 
         int w = board.getWidth(), h = board.getHeight();
         int[][] dirs = new int[][] { {1,0},{0,1},{1,1},{1,-1} };
         for (int y = 0; y < h; y++) {
@@ -304,7 +294,7 @@ public class AI_Minimax extends PlayerController {
 
     private int countPatterns(GomokuBoard board, TileState who, int len, boolean requireTwoOpenEnds) {
     	/* TODO: Think of a logic that consider spaced sequences (e.g: W W _ W W) and give additional 
-    	 * point in that cases (the example isn't counted as a sequence that can potentially end a game
+    	 * point in that cases (the example isn't counted as a sequence that can potentially end a game - Did it
     	 * */
         int w = board.getWidth(), h = board.getHeight();
         TileState opp = (who == TileState.White ? TileState.Black : TileState.White);
@@ -337,7 +327,7 @@ public class AI_Minimax extends PlayerController {
                         boolean openFront = (px >= 0 && py >= 0 && px < w && py < h && get(board, px, py) == TileState.Empty);
                         boolean openBack  = (sx >= 0 && sy >= 0 && sx < w && sy < h && get(board, sx, sy) == TileState.Empty);
                         int openEnds = (openFront ? 1 : 0) + (openBack ? 1 : 0);
-                        if ((requireTwoOpenEnds && openEnds == 2) || (!requireTwoOpenEnds && openEnds == 1)) { //garante que n tem duas contagens
+                        if ((requireTwoOpenEnds && openEnds == 2) || (!requireTwoOpenEnds && openEnds == 1)) {
                             count++;
                         }
                     }
@@ -363,7 +353,6 @@ public class AI_Minimax extends PlayerController {
 	
 	                 int stones = 0, empties = 0;
 	                 boolean blocked = false;
-	                 // guardamos em quais posições (0..4) da janela os vazios aparecem
 	                 int[] emptyPos = new int[5];
 	                 int emptyCnt = 0;
 	
@@ -373,22 +362,20 @@ public class AI_Minimax extends PlayerController {
 	                     if (t == who) {
 	                         stones++;
 	                     } else if (t == opp) {
-	                         blocked = true; break; // janela inválida
+	                         blocked = true; break; 
 	                     } else {
 	                         empties++;
-	                         emptyPos[emptyCnt++] = steps; // 0..4 relativo ao início da janela
+	                         emptyPos[emptyCnt++] = steps; 
 	                     }
 	                     cx += dx; cy += dy; steps++;
 	                 }
 	                 if (blocked || steps < 5) continue;
 	
-	                 // janela tem exatamente 'len' pedras minhas e 5-len vazios
 	                 if (stones == len && empties == (5 - len)) {
-	                     // "saltado" = existe AO MENOS um vazio INTERNO (pos 1..3)
 	                     boolean hasInternalEmpty = false;
 	                     for (int i = 0; i < emptyCnt; i++) {
 	                         int pos = emptyPos[i];
-	                         if (pos >= 1 && pos <= 3) { // vazio no meio da janela
+	                         if (pos >= 1 && pos <= 3) { // empty in the middle
 	                             hasInternalEmpty = true; break;
 	                         }
 	                     }

@@ -11,14 +11,13 @@ import projet1.gomoku.gamecore.GomokuBoard;
 import projet1.gomoku.gamecore.enums.Player;
 import projet1.gomoku.gamecore.enums.TileState;
 
+//Used for comparison of versions between different MiniMax
 
 public class AI_Minimax2 extends PlayerController {
 
     private final int maxDepth;
     private final int winLen = 5;
     private final int vicinityRadius = 2; // limita geração de jogadas às casas próximas
-    private final boolean useQuiescence = true;
-    private final int timeLimitMs = 900;
 
     public AI_Minimax2(int depth) {
         this.maxDepth = Math.max(1, depth);
@@ -207,11 +206,7 @@ public class AI_Minimax2 extends PlayerController {
         s += 800  * countOpen(board, toTile(me), 4);
         s += 300  * countSemiOpen(board, toTile(me), 4);
         s += 50   * countSemiOpen(board, toTile(me), 3);
-//        s += 1300 * countBroken(board, toTile(me), 4); //Agora conta padroes saltados X X _ X X
-//        s += 180 * countBroken(board, toTile(me), 3); // X _ X X
 
-//        s -= 1500 * countBroken(board, toTile(opp), 4);
-//        s -= 220 * countBroken(board, toTile(opp), 3);
         s -= 12   * countOpen(board, toTile(opp), 2);
         s -= 100  * countOpen(board, toTile(opp), 3);
         s -= 1200 * countOpen(board, toTile(opp), 4);
@@ -313,60 +308,7 @@ public class AI_Minimax2 extends PlayerController {
         }
         return count;
     }
-    
-	 private int countBroken(GomokuBoard board, TileState who, int len) {
-	     final int[][] DIRS = { {1,0}, {0,1}, {1,1}, {1,-1} };
-	     final int w = board.getWidth();
-	     final int h = board.getHeight();
-	     final TileState opp = (who == TileState.White ? TileState.Black : TileState.White);
-	
-	     int count = 0;
-	
-	     for (int[] d : DIRS) {
-	         final int dx = d[0], dy = d[1];
-	
-	         for (int y = 0; y < h; y++) {
-	             for (int x = 0; x < w; x++) {
-	
-	                 int stones = 0, empties = 0;
-	                 boolean blocked = false;
-	                 // guardamos em quais posições (0..4) da janela os vazios aparecem
-	                 int[] emptyPos = new int[5];
-	                 int emptyCnt = 0;
-	
-	                 int cx = x, cy = y, steps = 0;
-	                 while (cx >= 0 && cy >= 0 && cx < w && cy < h && steps < 5) {
-	                     TileState t = board.get(cx, cy);
-	                     if (t == who) {
-	                         stones++;
-	                     } else if (t == opp) {
-	                         blocked = true; break; // janela inválida
-	                     } else {
-	                         empties++;
-	                         emptyPos[emptyCnt++] = steps; // 0..4 relativo ao início da janela
-	                     }
-	                     cx += dx; cy += dy; steps++;
-	                 }
-	                 if (blocked || steps < 5) continue;
-	
-	                 // janela tem exatamente 'len' pedras minhas e 5-len vazios
-	                 if (stones == len && empties == (5 - len)) {
-	                     // "saltado" = existe AO MENOS um vazio INTERNO (pos 1..3)
-	                     boolean hasInternalEmpty = false;
-	                     for (int i = 0; i < emptyCnt; i++) {
-	                         int pos = emptyPos[i];
-	                         if (pos >= 1 && pos <= 3) { // vazio no meio da janela
-	                             hasInternalEmpty = true; break;
-	                         }
-	                     }
-	                     if (hasInternalEmpty) count++;
-	                 }
-	             }
-	         }
-	     }
-	     return count;
-	 }
-
+ 
 
     private TileState get(GomokuBoard b, int x, int y) {
         return b.get(x, y);

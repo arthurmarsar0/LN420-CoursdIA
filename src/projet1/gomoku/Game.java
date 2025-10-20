@@ -87,7 +87,7 @@ public class Game {
        // startMatch(new AI_Sweep(2), new AI_Sweep(2)); // Lancer une partie entre deux IA Sweep
         //startMatch(new AI_Star(3), new AI_Star(3)); // Lancer une partie entre deux IA Star
         //startMatch(new AI_Star(2), new AI_Sweep(2)); // Lancer une partie entre une IA Sweep et une IA Star
-        startMatch(new AI_Minimax2(3), new AI_Minimax3(3)); // Lancer une partie entre un joueur humain et une IA Sweep
+        startMatch(new AI_Minimax(3), new AI_Minimax3(3)); // Lancer une partie entre un joueur humain et une IA Sweep
     }
 
 }
