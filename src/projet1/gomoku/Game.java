@@ -7,7 +7,11 @@ package projet1.gomoku;
  
 import projet1.gomoku.controllers.HumanPlayer;
 import projet1.gomoku.controllers.PlayerController;
+import projet1.gomoku.controllers.ai.AI_Minimax;
+import projet1.gomoku.controllers.ai.AI_Minimax2;
+import projet1.gomoku.controllers.ai.AI_Minimax3;
 import projet1.gomoku.controllers.ai.AI_Random;
+import projet1.gomoku.controllers.ai.NetWorkPlayer;
 import projet1.gomoku.gamecore.Coords;
 import projet1.gomoku.gamecore.GomokuBoard;
 import projet1.gomoku.gamecore.enums.Player;
@@ -83,7 +87,7 @@ public class Game {
        // startMatch(new AI_Sweep(2), new AI_Sweep(2)); // Lancer une partie entre deux IA Sweep
         //startMatch(new AI_Star(3), new AI_Star(3)); // Lancer une partie entre deux IA Star
         //startMatch(new AI_Star(2), new AI_Sweep(2)); // Lancer une partie entre une IA Sweep et une IA Star
-        startMatch(new HumanPlayer(), new AI_Random(2)); // Lancer une partie entre un joueur humain et une IA Sweep
+        startMatch(new AI_Minimax(3), new AI_Minimax3(3)); // Lancer une partie entre un joueur humain et une IA Sweep
     }
 
 }
